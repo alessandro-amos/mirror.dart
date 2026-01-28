@@ -1,7 +1,7 @@
 name: mirror_builder
 description: Mirror is a lightweight static reflection library for Dart, using code generation.
   It is designed as a modern alternative to `reflectable`.
-version: 0.0.1
+version: 0.1.0
 resolution: workspace
 repository: https://github.com/alessandro-amos/mirror.dart.git
 
@@ -10,7 +10,7 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
-  mirror: ^0.0.1
+  mirror: ^0.1.0
   analyzer: ^8.0.0
   watcher: ^1.2.1
   path: ^1.9.1

@@ -24,8 +24,7 @@ fields, constructors, etc.) to keep the generated code size small.
 
 ### 1. Define your Reflection Strategy
 
-Create a constant class that extends `Mirrors` and implements the capabilities you need. You can use `AllCapability` for
-full access or pick specific interfaces like `MethodsCapability` or `FieldsCapability`.
+Create a constant class that extends `Mirrors` and implements the capabilities you need. You can use `AllCapability` for full access or pick specific interfaces like `MethodsCapability` or `FieldsCapability`.
 
 ```dart
 import 'package:mirror/mirror.dart';
@@ -74,13 +73,14 @@ dart run build_runner build
 
 ### 4. Use Reflection
 
-Import the generated file (usually `main.mirror.dart` or `<filename>.mirror.dart` depending on your setup) and
-initialize the system.
+In your `main.dart` file, add the `@entrypoint` annotation and import the generated file. The `.mirror.dart` file will be generated in the same location as your `main.dart`.
 
 ```dart
 import 'package:mirror/mirror.dart';
-import 'main.mirror.dart'; // Import generated code
+import 'main.mirror.dart'; // Import the generated code
 
+// Mark this as the entry point for mirror generation
+@entrypoint
 void main() {
   // 1. Initialize the generated mirrors
   initializeMirrors();

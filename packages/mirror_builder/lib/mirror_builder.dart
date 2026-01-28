@@ -34,7 +34,11 @@ class MirrorBuilder implements Builder {
 
     LibraryElement inputLibrary = await buildStep.inputLibrary;
 
-    if (inputLibrary.entryPoint == null) {
+    bool hasEntrypoint = inputLibrary.topLevelFunctions.any(
+      _hasEntryPointAnnotation,
+    );
+
+    if (!hasEntrypoint) {
       return;
     }
 
@@ -65,5 +69,13 @@ class MirrorBuilder implements Builder {
     } catch (e, stack) {
       log.severe('Error generating mirrors for $inputId', e, stack);
     }
+  }
+
+  bool _hasEntryPointAnnotation(TopLevelFunctionElement element) {
+    return element.metadata.annotations.any((annotation) {
+      final name = annotation.element?.name;
+      final parentName = annotation.element?.enclosingElement?.name;
+      return name == 'entrypoint' || parentName == 'Entrypoint';
+    });
   }
 }

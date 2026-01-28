@@ -1,3 +1,4 @@
+import 'package:mirror/mirror.dart';
 import 'package:test_mirror/serializer.dart';
 import 'package:test/test.dart';
 
@@ -26,6 +27,7 @@ class User {
   User();
 }
 
+@entrypoint
 void main() {
   initializeMirrors();
 

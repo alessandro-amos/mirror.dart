@@ -19,6 +19,7 @@ void addTodo(List<Todo> todos, String message) {
   todos.add(Todo(message));
 }
 
+@entrypoint
 void main() {
   initializeMirrors();
 

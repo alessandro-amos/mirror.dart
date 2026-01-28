@@ -43,3 +43,9 @@ abstract class AllCapability
 abstract class Mirrors {
   const Mirrors();
 }
+
+class Entrypoint {
+  const Entrypoint();
+}
+
+const entrypoint = Entrypoint();

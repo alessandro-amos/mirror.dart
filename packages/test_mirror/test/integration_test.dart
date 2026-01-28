@@ -47,6 +47,7 @@ class UserController {
   }
 }
 
+@entrypoint
 void main() {
   initializeMirrors();
 
