@@ -26,7 +26,7 @@ class MirrorGenerator {
 
     for (var asset in allAssets) {
       if (asset == inputId) continue;
-      if (asset.path.endsWith('.mirrors.dart') ||
+      if (asset.path.endsWith('.mirror.dart') ||
           asset.path.endsWith('.g.dart')) {
         continue;
       }
@@ -335,7 +335,7 @@ class _InternalGenerator {
   void _writeHeader(StringBuffer buffer) {
     buffer.writeln("// dart format width=10000");
     buffer.writeln("// GENERATED CODE - DO NOT MODIFY BY HAND");
-    buffer.writeln("import 'package:mirrors/mirrors.dart' as m;");
+    buffer.writeln("import 'package:mirror/mirror.dart' as m;");
 
     for (final import in _imports.getImports()) {
       buffer.writeln(import);

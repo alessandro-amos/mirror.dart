@@ -1,4 +1,4 @@
-name: test_mirrors
+name: test_mirror
 description: A sample command-line application.
 version: 0.0.1
 publish_to: none
@@ -10,12 +10,12 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
-  mirrors:
-    path: ../mirrors
+  mirror:
+    path: ../mirror
   path: ^1.9.0
 
 dev_dependencies:
-  mirrors_builder:
-    path: ../mirrors_builder
+  mirror_builder:
+    path: ../mirror_builder
   lints: ^6.0.0
   test: ^1.25.6

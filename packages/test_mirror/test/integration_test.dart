@@ -1,7 +1,7 @@
-import 'package:mirrors/mirrors.dart';
+import 'package:mirror/mirror.dart';
 import 'package:test/test.dart';
 
-import 'integration_test.mirrors.dart';
+import 'integration_test.mirror.dart';
 
 class Mirrored extends Mirrors implements AllCapability {
   const Mirrored();

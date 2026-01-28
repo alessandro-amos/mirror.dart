@@ -12,7 +12,7 @@ dependencies:
   mirrors: ^1.0.0
 
 dev_dependencies:
-  mirrors_builder: ^1.0.0
+  mirror_builder: ^1.0.0
   build_runner: ^2.4.0
 
 ```
@@ -28,7 +28,7 @@ Create a constant class that extends `Mirrors` and implements the capabilities y
 full access or pick specific interfaces like `MethodsCapability` or `FieldsCapability`.
 
 ```dart
-import 'package:mirrors/mirrors.dart';
+import 'package:mirror/mirror.dart';
 
 // Create a custom annotation that defines your reflection capabilities
 class Mirrored extends Mirrors implements AllCapability {
@@ -74,12 +74,12 @@ dart run build_runner build
 
 ### 4. Use Reflection
 
-Import the generated file (usually `main.mirrors.dart` or `<filename>.mirrors.dart` depending on your setup) and
+Import the generated file (usually `main.mirror.dart` or `<filename>.mirror.dart` depending on your setup) and
 initialize the system.
 
 ```dart
-import 'package:mirrors/mirrors.dart';
-import 'main.mirrors.dart'; // Import generated code
+import 'package:mirror/mirror.dart';
+import 'main.mirror.dart'; // Import generated code
 
 void main() {
   // 1. Initialize the generated mirrors

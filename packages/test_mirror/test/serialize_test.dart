@@ -1,7 +1,7 @@
-import 'package:test_mirrors/serializer.dart';
+import 'package:test_mirror/serializer.dart';
 import 'package:test/test.dart';
 
-import 'serialize_test.mirrors.dart';
+import 'serialize_test.mirror.dart';
 
 @serializable
 enum Status { active, inactive, suspended }

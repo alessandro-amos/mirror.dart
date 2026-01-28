@@ -1,4 +1,4 @@
-import 'package:mirrors/mirrors.dart';
+import 'package:mirror/mirror.dart';
 
 class Serializable extends Mirrors
     implements

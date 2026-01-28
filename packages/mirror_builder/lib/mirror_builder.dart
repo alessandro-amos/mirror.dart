@@ -3,23 +3,23 @@ import 'dart:async';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:dart_style/dart_style.dart';
-import 'package:mirrors_builder/src/generator.dart';
+import 'package:mirror_builder/src/generator.dart';
 
 /// Factory method following the Reflectable pattern, allowing configuration via `build.yaml`.
-Builder mirrorsBuilder(BuilderOptions options) {
-  return MirrorsBuilder(options);
+Builder mirrorBuilder(BuilderOptions options) {
+  return MirrorBuilder(options);
 }
 
 /// A builder that generates mirror code for annotated classes.
-class MirrorsBuilder implements Builder {
+class MirrorBuilder implements Builder {
   final BuilderOptions options;
 
-  /// Creates a [MirrorsBuilder].
-  MirrorsBuilder(this.options);
+  /// Creates a [MirrorBuilder].
+  MirrorBuilder(this.options);
 
   @override
   Map<String, List<String>> get buildExtensions => const {
-    '.dart': ['.mirrors.dart'],
+    '.dart': ['.mirror.dart'],
   };
 
   @override
@@ -41,7 +41,7 @@ class MirrorsBuilder implements Builder {
     log.info('Generating mirrors for: ${buildStep.inputId.path}');
 
     final inputId = buildStep.inputId;
-    final outputId = inputId.changeExtension('.mirrors.dart');
+    final outputId = inputId.changeExtension('.mirror.dart');
 
     try {
       String generatedSource = await MirrorGenerator().buildMirrorLibrary(

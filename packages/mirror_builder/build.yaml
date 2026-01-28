@@ -1,9 +1,9 @@
 builders:
-  mirrors:
-    target: ":mirrors_builder"
-    import: "package:mirrors_builder/mirrors_builder.dart"
-    builder_factories: [ "mirrorsBuilder" ]
-    build_extensions: { ".dart": [ ".mirrors.dart" ] }
+  mirror:
+    target: ":mirror_builder"
+    import: "package:mirror_builder/mirror_builder.dart"
+    builder_factories: [ "mirrorBuilder" ]
+    build_extensions: { ".dart": [ ".mirror.dart" ] }
     auto_apply: root_package
     build_to: source
     defaults:
