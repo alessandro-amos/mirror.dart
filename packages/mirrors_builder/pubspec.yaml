@@ -1,5 +1,6 @@
 name: mirrors_builder
-description: A starting point for Dart libraries or applications.
+description: Mirrors is a lightweight static reflection library for Dart, using code generation.
+  It is designed as a modern alternative to `reflectable`.
 version: 0.0.1
 resolution: workspace
 repository: https://github.com/alessandro-amos/mirrors.dart.git
