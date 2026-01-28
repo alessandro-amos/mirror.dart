@@ -5,25 +5,22 @@ import 'package:build/build.dart';
 
 import 'import_collector.dart';
 
-/// Extracts annotations from analyzed elements and writes them to the string buffer.
 class AnnotationExtractor {
   final Element element;
   final ImportCollector imports;
   final Resolver resolver;
 
-  /// Creates an [AnnotationExtractor].
   AnnotationExtractor(this.element, this.imports, this.resolver);
 
-  /// Writes the annotations found on [element] to the [buffer].
   Future<void> writeTo(StringBuffer buffer) async {
-    final metadata = await _getMetadata();
+    final metadata = await _collectAllAnnotations();
 
-    if (metadata == null || metadata.isEmpty) {
-      buffer.write("const []");
+    if (metadata.isEmpty) {
+      buffer.write("const <dynamic>[]");
       return;
     }
 
-    buffer.write("const [");
+    buffer.write("const <dynamic>[");
     for (var i = 0; i < metadata.length; i++) {
       if (i > 0) buffer.write(", ");
       await _writeAnnotation(metadata[i], buffer);
@@ -31,9 +28,8 @@ class AnnotationExtractor {
     buffer.write("]");
   }
 
-  /// Writes the default value of the [element] to the [buffer] with proper prefixes.
   Future<void> writeDefaultValueTo(StringBuffer buffer) async {
-    final node = await _getAstNode();
+    final node = await _getAstNodeFor(element);
 
     if (node is DefaultFormalParameter && node.defaultValue != null) {
       await _writeExpression(node.defaultValue!, buffer);
@@ -48,8 +44,58 @@ class AnnotationExtractor {
     }
   }
 
-  Future<AstNode?> _getAstNode() async {
-    final library = element.library;
+  Future<List<Annotation>> _collectAllAnnotations() async {
+    final annotations = <Annotation>[];
+
+    Future<void> addFor(Element? e) async {
+      if (e == null) return;
+      final meta = await _getMetadataFor(e);
+      if (meta != null) {
+        annotations.addAll(meta);
+      }
+    }
+
+    await addFor(element);
+
+    if (element is ClassElement) {
+      final cls = element as ClassElement;
+      for (final supertype in cls.allSupertypes) {
+        if (supertype.isDartCoreObject) continue;
+        await addFor(supertype.element);
+      }
+    } else if (element.enclosingElement is ClassElement) {
+      final cls = element.enclosingElement as ClassElement;
+      final name = element.name;
+
+      if (name != null) {
+        for (final supertype in cls.allSupertypes) {
+          if (supertype.isDartCoreObject) continue;
+          Element? match;
+
+          if (element is MethodElement) {
+            match = supertype.element.getMethod(name);
+          } else if (element is GetterElement) {
+            match = supertype.element.getGetter(name);
+          } else if (element is SetterElement) {
+            var lookupName = name;
+            if (lookupName.endsWith('=')) {
+              lookupName = lookupName.substring(0, lookupName.length - 1);
+            }
+            match = supertype.element.getSetter(lookupName);
+          } else if (element is FieldElement) {
+            match = supertype.element.getField(name);
+          }
+
+          await addFor(match);
+        }
+      }
+    }
+
+    return annotations;
+  }
+
+  Future<AstNode?> _getAstNodeFor(Element target) async {
+    final library = target.library;
     if (library == null) return null;
 
     try {
@@ -63,7 +109,7 @@ class AnnotationExtractor {
 
       if (result is ResolvedLibraryResult) {
         final declaration = result.getFragmentDeclaration(
-          element.firstFragment,
+          target.firstFragment,
         );
         return declaration?.node;
       }
@@ -73,15 +119,15 @@ class AnnotationExtractor {
     return null;
   }
 
-  Future<NodeList<Annotation>?> _getMetadata() async {
-    final node = await _getAstNode();
+  Future<NodeList<Annotation>?> _getMetadataFor(Element target) async {
+    final node = await _getAstNodeFor(target);
     if (node == null) return null;
 
     if (node is AnnotatedNode) {
       return node.metadata;
     } else if (node is FormalParameter) {
       return node.metadata;
-    } else if (element is VariableElement) {
+    } else if (target is VariableElement) {
       if (node is VariableDeclaration) {
         final parent = node.parent;
         if (parent is VariableDeclarationList) {
@@ -125,9 +171,9 @@ class AnnotationExtractor {
   }
 
   Future<void> _writeExpression(
-    Expression expression,
-    StringBuffer buffer,
-  ) async {
+      Expression expression,
+      StringBuffer buffer,
+      ) async {
     if (expression is BooleanLiteral) {
       buffer.write(expression.value.toString());
     } else if (expression is DoubleLiteral) {
@@ -169,9 +215,9 @@ class AnnotationExtractor {
   }
 
   Future<void> _writeIdentifier(
-    SimpleIdentifier identifier,
-    StringBuffer buffer,
-  ) async {
+      SimpleIdentifier identifier,
+      StringBuffer buffer,
+      ) async {
     final elem = identifier.element;
     if (elem != null && elem.library != null) {
       if (identifier.parent is NamedExpression &&
@@ -185,9 +231,9 @@ class AnnotationExtractor {
   }
 
   Future<void> _writePrefixedIdentifier(
-    PrefixedIdentifier identifier,
-    StringBuffer buffer,
-  ) async {
+      PrefixedIdentifier identifier,
+      StringBuffer buffer,
+      ) async {
     final elem = identifier.element;
     if (elem != null && elem.library != null) {
       buffer.write(imports.getPrefix(elem.library!));
@@ -201,9 +247,9 @@ class AnnotationExtractor {
   }
 
   Future<void> _writeInstanceCreation(
-    InstanceCreationExpression expression,
-    StringBuffer buffer,
-  ) async {
+      InstanceCreationExpression expression,
+      StringBuffer buffer,
+      ) async {
     if (expression.keyword != null) {
       buffer.write('${expression.keyword!.lexeme} ');
     }
@@ -230,9 +276,9 @@ class AnnotationExtractor {
   }
 
   Future<void> _writeListLiteral(
-    ListLiteral expression,
-    StringBuffer buffer,
-  ) async {
+      ListLiteral expression,
+      StringBuffer buffer,
+      ) async {
     if (expression.constKeyword != null) buffer.write('const ');
     if (expression.typeArguments != null) {
       _writeTypeArgumentList(expression.typeArguments!, buffer);
@@ -251,9 +297,9 @@ class AnnotationExtractor {
   }
 
   Future<void> _writeSetOrMapLiteral(
-    SetOrMapLiteral expression,
-    StringBuffer buffer,
-  ) async {
+      SetOrMapLiteral expression,
+      StringBuffer buffer,
+      ) async {
     if (expression.constKeyword != null) buffer.write('const ');
     if (expression.typeArguments != null) {
       _writeTypeArgumentList(expression.typeArguments!, buffer);
@@ -276,9 +322,9 @@ class AnnotationExtractor {
   }
 
   Future<void> _writeMethodInvocation(
-    MethodInvocation expression,
-    StringBuffer buffer,
-  ) async {
+      MethodInvocation expression,
+      StringBuffer buffer,
+      ) async {
     if (expression.target != null) {
       await _writeExpression(expression.target!, buffer);
       buffer.write('.');
@@ -293,9 +339,9 @@ class AnnotationExtractor {
   }
 
   Future<void> _writeConstructorReference(
-    ConstructorReference expression,
-    StringBuffer buffer,
-  ) async {
+      ConstructorReference expression,
+      StringBuffer buffer,
+      ) async {
     final elem = expression.constructorName.type.element;
     if (elem != null && elem.library != null) {
       buffer.write(imports.getPrefix(elem.library));

@@ -6,13 +6,3 @@ builders:
     build_extensions: { ".dart": [ ".mirror.dart" ] }
     auto_apply: root_package
     build_to: source
-    defaults:
-      generate_for:
-        include:
-          - benchmark/**.dart
-          - bin/**.dart
-          - example/**.dart
-          - lib/main.dart
-          - test/**.dart
-          - tool/**.dart
-          - web/**.dart

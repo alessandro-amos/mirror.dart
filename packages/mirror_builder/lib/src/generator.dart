@@ -15,11 +15,11 @@ class MirrorGenerator {
   MirrorGenerator();
 
   Future<String> buildMirrorLibrary(
-    BuildStep buildStep,
-    AssetId inputId,
-    AssetId outputId,
-    LibraryElement inputLibrary,
-  ) async {
+      BuildStep buildStep,
+      AssetId inputId,
+      AssetId outputId,
+      LibraryElement inputLibrary,
+      ) async {
     final importCollector = ImportCollector(outputId, inputLibrary);
     final allAssets = await buildStep.findAssets(Glob('lib/**.dart')).toList();
     final extraLibraries = <LibraryElement>[];
@@ -136,7 +136,7 @@ class _AccessorRegistry {
     }
     buffer.writeln("};");
 
-    buffer.writeln("final _methods = <String, Function Function(dynamic)>{");
+    buffer.writeln("final _methods = <String, dynamic Function(dynamic)>{");
     for (final name in _methods) {
       buffer.writeln("  r'$name': (dynamic i) => i.$name,");
     }
@@ -154,12 +154,12 @@ class _InternalGenerator {
   late final _AccessorRegistry _accessorRegistry;
 
   _InternalGenerator(
-    this.entryPoint,
-    this.outputId,
-    this._imports,
-    this._extraLibraries,
-    this._resolver,
-  ) {
+      this.entryPoint,
+      this.outputId,
+      this._imports,
+      this._extraLibraries,
+      this._resolver,
+      ) {
     _typeRegistry = _TypeRegistry();
     _accessorRegistry = _AccessorRegistry();
   }
@@ -173,7 +173,7 @@ class _InternalGenerator {
 
     final sortedLibraries = allLibraries.toList()
       ..sort(
-        (a, b) => a.firstFragment.source.uri.toString().compareTo(
+            (a, b) => a.firstFragment.source.uri.toString().compareTo(
           b.firstFragment.source.uri.toString(),
         ),
       );
@@ -335,6 +335,7 @@ class _InternalGenerator {
   void _writeHeader(StringBuffer buffer) {
     buffer.writeln("// dart format width=10000");
     buffer.writeln("// GENERATED CODE - DO NOT MODIFY BY HAND");
+    buffer.writeln("// ignore_for_file: type=lint");
     buffer.writeln("import 'package:mirror/mirror.dart' as m;");
 
     for (final import in _imports.getImports()) {
@@ -343,7 +344,7 @@ class _InternalGenerator {
   }
 
   void _writeTypeTable(StringBuffer buffer) {
-    buffer.writeln("\nfinal List<m.TypeMirror> _types = [");
+    buffer.writeln("\nfinal List<m.TypeMirror<dynamic>> _types = [");
     for (final type in _typeRegistry.types) {
       _writeTypeMirrorInstance(type, buffer);
       buffer.writeln(",");
@@ -355,24 +356,24 @@ class _InternalGenerator {
     if (type is InterfaceType) {
       final qualifiedType = _getQualifiedTypeString(type);
       final indices = _typeRegistry.getTypeArgumentsIndices(type);
-      final indicesStr = indices.isEmpty ? '[]' : '[${indices.join(', ')}]';
+      final indicesStr = indices.isEmpty ? '<int>[]' : '<int>[${indices.join(', ')}]';
       buffer.write(
         "m.type<$qualifiedType>($indicesStr${type.nullabilitySuffix == NullabilitySuffix.question ? ', true' : ''})",
       );
     } else {
       if (type is VoidType) {
-        buffer.write("m.type<void>([])");
+        buffer.write("m.type<void>(<int>[])");
       } else {
-        buffer.write("m.type<dynamic>([])");
+        buffer.write("m.type<dynamic>(<int>[])");
       }
     }
   }
 
   Future<void> _generateClassMirrorEntry(
-    ClassElement element,
-    DartObject annotation,
-    StringBuffer buffer,
-  ) async {
+      ClassElement element,
+      DartObject annotation,
+      StringBuffer buffer,
+      ) async {
     final capabilities = _parseCapabilities(annotation);
     final typeIndex = _typeRegistry.register(element.thisType);
     final className = element.displayName;
@@ -384,7 +385,7 @@ class _InternalGenerator {
     buffer.write(", ");
 
     if (capabilities.contains('fields')) {
-      buffer.write("[");
+      buffer.write("<List<dynamic>>[");
       for (final field in element.fields) {
         if (field.isPrivate || field.isStatic) continue;
         await _generateCompactField(field, buffer);
@@ -395,7 +396,7 @@ class _InternalGenerator {
     }
 
     if (capabilities.contains('getters')) {
-      buffer.write("[");
+      buffer.write("<List<dynamic>>[");
       for (final getter in element.getters) {
         if (!getter.isPrivate && !getter.isStatic && !getter.isSynthetic) {
           await _generateCompactGetter(getter, buffer);
@@ -407,7 +408,7 @@ class _InternalGenerator {
     }
 
     if (capabilities.contains('setters')) {
-      buffer.write("[");
+      buffer.write("<List<dynamic>>[");
       for (final setter in element.setters) {
         if (!setter.isPrivate && !setter.isStatic && !setter.isSynthetic) {
           await _generateCompactSetter(setter, buffer);
@@ -419,7 +420,7 @@ class _InternalGenerator {
     }
 
     if (capabilities.contains('methods')) {
-      buffer.write("[");
+      buffer.write("<List<dynamic>>[");
       for (final method in element.methods) {
         if (method.isPrivate || method.isStatic || method.isOperator) continue;
         await _generateCompactMethod(method, buffer);
@@ -430,7 +431,7 @@ class _InternalGenerator {
     }
 
     if (capabilities.contains('constructors')) {
-      buffer.write("[");
+      buffer.write("<List<dynamic>>[");
       for (final ctor in element.constructors) {
         if (ctor.isPrivate) continue;
         await _generateCompactConstructor(ctor, buffer);
@@ -444,23 +445,23 @@ class _InternalGenerator {
   }
 
   Future<void> _generateCompactField(
-    FieldElement field,
-    StringBuffer buffer,
-  ) async {
+      FieldElement field,
+      StringBuffer buffer,
+      ) async {
     final typeIdx = _typeRegistry.register(field.type);
     buffer.write(
-      "['${field.displayName}', $typeIdx, ${field.isFinal}, ${field.isStatic}, ",
+      "<dynamic>['${field.displayName}', $typeIdx, ${field.isFinal}, ${field.isStatic}, ",
     );
     await _writeMetadata(field, buffer);
     buffer.write("],");
   }
 
   Future<void> _generateCompactMethod(
-    MethodElement method,
-    StringBuffer buffer,
-  ) async {
+      MethodElement method,
+      StringBuffer buffer,
+      ) async {
     final retIdx = _typeRegistry.register(method.returnType);
-    buffer.write("['${method.displayName}', $retIdx, [");
+    buffer.write("<dynamic>['${method.displayName}', $retIdx, <List<dynamic>>[");
     for (final p in method.formalParameters) {
       await _generateCompactParam(p, buffer);
     }
@@ -470,9 +471,9 @@ class _InternalGenerator {
   }
 
   Future<void> _generateCompactConstructor(
-    ConstructorElement ctor,
-    StringBuffer buffer,
-  ) async {
+      ConstructorElement ctor,
+      StringBuffer buffer,
+      ) async {
     final name = (ctor.name?.isEmpty ?? true) ? '' : ctor.name!;
     final parent = ctor.enclosingElement;
     final parentPrefix = _imports.getPrefix(parent.library);
@@ -480,7 +481,7 @@ class _InternalGenerator {
         ? '$parentPrefix${parent.name}.new'
         : '$parentPrefix${parent.name}.$name';
 
-    buffer.write("['$name', () => $fullName, [");
+    buffer.write("<dynamic>['$name', () => $fullName, <List<dynamic>>[");
     for (final p in ctor.formalParameters) {
       await _generateCompactParam(p, buffer);
     }
@@ -490,32 +491,32 @@ class _InternalGenerator {
   }
 
   Future<void> _generateCompactGetter(
-    PropertyAccessorElement g,
-    StringBuffer buffer,
-  ) async {
+      PropertyAccessorElement g,
+      StringBuffer buffer,
+      ) async {
     final idx = _typeRegistry.register(g.returnType);
-    buffer.write("['${g.displayName}', $idx, ");
+    buffer.write("<dynamic>['${g.displayName}', $idx, ");
     await _writeMetadata(g, buffer);
     buffer.write("],");
   }
 
   Future<void> _generateCompactSetter(
-    PropertyAccessorElement s,
-    StringBuffer buffer,
-  ) async {
+      PropertyAccessorElement s,
+      StringBuffer buffer,
+      ) async {
     final idx = _typeRegistry.register(s.formalParameters.first.type);
-    buffer.write("['${s.displayName}', $idx, ");
+    buffer.write("<dynamic>['${s.displayName}', $idx, ");
     await _writeMetadata(s, buffer);
     buffer.write("],");
   }
 
   Future<void> _generateCompactParam(
-    FormalParameterElement p,
-    StringBuffer buffer,
-  ) async {
+      FormalParameterElement p,
+      StringBuffer buffer,
+      ) async {
     final idx = _typeRegistry.register(p.type);
     buffer.write(
-      "['${p.displayName}', ${p.isPositional}, ${p.isRequired}, $idx, ",
+      "<dynamic>['${p.displayName}', ${p.isPositional}, ${p.isRequired}, $idx, ",
     );
     if (p.hasDefaultValue) {
       await AnnotationExtractor(
@@ -532,16 +533,16 @@ class _InternalGenerator {
   }
 
   Future<void> _generateEnumMirrorEntry(
-    EnumElement element,
-    DartObject annotation,
-    StringBuffer buffer,
-  ) async {
+      EnumElement element,
+      DartObject annotation,
+      StringBuffer buffer,
+      ) async {
     final prefix = _imports.getPrefix(element.library);
     final enumName = '$prefix${element.name}';
     final typeIdx = _typeRegistry.register(element.thisType);
 
     buffer.write(
-      "    _types[$typeIdx].type: m.EnumMirror('${element.displayName}', $typeIdx, [",
+      "    _types[$typeIdx].type: m.EnumMirror('${element.displayName}', $typeIdx, <m.EnumConstantMirror>[",
     );
     for (final field in element.fields) {
       if (field.isEnumConstant) {
@@ -562,16 +563,16 @@ class _InternalGenerator {
   }
 
   Future<void> _generateFunctionMirrorEntry(
-    FunctionTypedElement element,
-    DartObject annotation,
-    StringBuffer buffer,
-  ) async {
+      FunctionTypedElement element,
+      DartObject annotation,
+      StringBuffer buffer,
+      ) async {
     final prefix = _imports.getPrefix(element.library);
     final funcName = '$prefix${element.name}';
     final retIdx = _typeRegistry.register(element.returnType);
 
     buffer.write(
-      "    '${element.displayName}': m.FunctionMirror('${element.displayName}', $retIdx, [",
+      "    '${element.displayName}': m.FunctionMirror('${element.displayName}', $retIdx, <m.ParameterMirror>[",
     );
     for (final p in element.formalParameters) {
       final pIdx = _typeRegistry.register(p.type);
@@ -654,10 +655,10 @@ class _InternalGenerator {
       }
 
       for (final importedLib
-          in current.fragments
-              .map((f) => f.importedLibraries)
-              .expand((x) => x)
-              .toList()) {
+      in current.fragments
+          .map((f) => f.importedLibraries)
+          .expand((x) => x)
+          .toList()) {
         addCandidate(importedLib);
       }
       for (final exportedLib in current.exportedLibraries) {

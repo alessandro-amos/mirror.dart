@@ -12,7 +12,7 @@ Map<String, dynamic Function(dynamic)> gettersInvokers = {};
 
 Map<String, void Function(dynamic, dynamic)> settersInvokers = {};
 
-Map<String, Function Function(dynamic)> methodsInvokers = {};
+Map<String, dynamic Function(dynamic)> methodsInvokers = {};
 
 ClassMirror reflectClass(Type type) {
   final mirror = classesMap[type];
@@ -522,7 +522,7 @@ class MethodMirror extends DeclarationMirror implements HasOwner<ClassMirror> {
       throw ReflectException("Implementation for method '$name' not found.");
     }
 
-    final fn = invoker(instance);
+    final fn = invoker(instance) as Function;
     return Function.apply(fn, args, namedArgs);
   }
 }
