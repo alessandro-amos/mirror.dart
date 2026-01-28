@@ -1,0 +1,18 @@
+builders:
+  mirrors:
+    target: ":mirrors_builder"
+    import: "package:mirrors_builder/mirrors_builder.dart"
+    builder_factories: [ "mirrorsBuilder" ]
+    build_extensions: { ".dart": [ ".mirrors.dart" ] }
+    auto_apply: root_package
+    build_to: source
+    defaults:
+      generate_for:
+        include:
+          - benchmark/**.dart
+          - bin/**.dart
+          - example/**.dart
+          - lib/main.dart
+          - test/**.dart
+          - tool/**.dart
+          - web/**.dart

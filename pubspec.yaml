@@ -1,0 +1,7 @@
+name: mirrors.dart
+environment:
+  sdk: ">=3.8.2 <4.0.0"
+workspace:
+  - packages/mirrors
+  - packages/mirrors_builder
+  - packages/test_mirrors
