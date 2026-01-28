@@ -2,7 +2,7 @@ name: mirrors_builder
 description: A starting point for Dart libraries or applications.
 version: 0.0.1
 resolution: workspace
-# repository: https://github.com/my_org/my_repo
+repository: https://github.com/alessandro-amos/mirrors.dart.git
 
 environment:
   sdk: ">=3.8.2 <4.0.0"
