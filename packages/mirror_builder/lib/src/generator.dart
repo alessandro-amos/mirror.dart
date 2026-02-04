@@ -87,9 +87,8 @@ class _TypeRegistry {
     if (type is InterfaceType) {
       final lib = type.element.library.firstFragment.source.uri.toString();
       final args = type.typeArguments.map(_uniqueKey).join(',');
-      final suffix = type.nullabilitySuffix == NullabilitySuffix.question
-          ? '?'
-          : '';
+      final suffix =
+      type.nullabilitySuffix == NullabilitySuffix.question ? '?' : '';
       return '$lib|${type.element.name}<$args>$suffix';
     }
     return type.toString();
@@ -113,9 +112,8 @@ class _AccessorRegistry {
   void registerGetter(String name) => _getters.add(name);
 
   void registerSetter(String name) {
-    final normalized = name.endsWith('=')
-        ? name.substring(0, name.length - 1)
-        : name;
+    final normalized =
+    name.endsWith('=') ? name.substring(0, name.length - 1) : name;
     _setters.add(normalized);
   }
 
@@ -165,24 +163,16 @@ class _InternalGenerator {
   }
 
   Future<String> generate() async {
-    final transitiveLibraries = _getTransitiveLibraries(entryPoint);
-    final allLibraries = <LibraryElement>{
-      ...transitiveLibraries,
-      ..._extraLibraries,
-    };
+    final initialLibraries = _getTransitiveLibraries(entryPoint);
+    initialLibraries.addAll(_extraLibraries);
 
-    final sortedLibraries = allLibraries.toList()
-      ..sort(
-            (a, b) => a.firstFragment.source.uri.toString().compareTo(
-          b.firstFragment.source.uri.toString(),
-        ),
-      );
+    final allLibraries = _expandLibrariesBasedOnUsage(initialLibraries);
 
     final mirrorClasses = <ClassElement, DartObject>{};
     final mirrorEnums = <EnumElement, DartObject>{};
     final mirrorFunctions = <FunctionTypedElement, DartObject>{};
 
-    for (final lib in sortedLibraries) {
+    for (final lib in allLibraries) {
       if (lib.isDartCore || lib.isInSdk) continue;
 
       for (final clazz in lib.classes) {
@@ -233,6 +223,9 @@ class _InternalGenerator {
     final initBuffer = StringBuffer();
     initBuffer.writeln("\nvoid initializeMirrors() {");
 
+    _writeTypeTable(initBuffer);
+    _accessorRegistry.writeTo(initBuffer);
+
     initBuffer.writeln("  m.types = _types;");
 
     if (classesBlock.isNotEmpty) {
@@ -265,18 +258,143 @@ class _InternalGenerator {
 
     initBuffer.writeln("}");
 
-    final typeTableBuffer = StringBuffer();
-    _writeTypeTable(typeTableBuffer);
-
     final finalBuffer = StringBuffer();
     _writeHeader(finalBuffer);
-    finalBuffer.write(typeTableBuffer);
-
-    _accessorRegistry.writeTo(finalBuffer);
-
     finalBuffer.write(initBuffer);
 
     return finalBuffer.toString();
+  }
+
+  Set<LibraryElement> _expandLibrariesBasedOnUsage(
+      Set<LibraryElement> initial) {
+    final visited = {...initial};
+    final queue = Queue<LibraryElement>.from(initial);
+
+    void collectTypeLibrary(DartType? type) {
+      if (type == null) return;
+      if (type is InterfaceType) {
+        final lib = type.element.library;
+        if (!lib.isDartCore && !lib.isInSdk && !visited.contains(lib)) {
+          visited.add(lib);
+          queue.add(lib);
+        }
+        for (var arg in type.typeArguments) {
+          collectTypeLibrary(arg);
+        }
+      }
+    }
+
+    while (queue.isNotEmpty) {
+      final lib = queue.removeFirst();
+      if (lib.isDartCore || lib.isInSdk) continue;
+
+      for (final clazz in lib.classes) {
+        {
+          for (var field in clazz.fields) {
+            collectTypeLibrary(field.type);
+          }
+
+          for (var method in clazz.methods) {
+            collectTypeLibrary(method.returnType);
+            for (var param in method.formalParameters) {
+              collectTypeLibrary(param.type);
+            }
+          }
+
+          for (var ctor in clazz.constructors) {
+            for (var param in ctor.formalParameters) {
+              collectTypeLibrary(param.type);
+            }
+          }
+        }
+      }
+
+      for (final imported in lib.fragments
+          .map((f) => f.importedLibraries)
+          .expand((x) => x)
+          .toList()) {
+        if (!imported.isDartCore &&
+            !imported.isInSdk &&
+            !visited.contains(imported)) {
+          visited.add(imported);
+          queue.add(imported);
+        }
+      }
+
+      for (final exported in lib.exportedLibraries) {
+        if (!exported.isDartCore &&
+            !exported.isInSdk &&
+            !visited.contains(exported)) {
+          visited.add(exported);
+          queue.add(exported);
+        }
+      }
+    }
+    return visited;
+  }
+
+  List<FieldElement> _getFields(ClassElement element) {
+    final map = <String, FieldElement>{};
+    for (final type in element.allSupertypes) {
+      if (type.isDartCoreObject) continue;
+      for (final field in type.element.fields) {
+        if (!field.isStatic && !map.containsKey(field.displayName)) {
+          map[field.displayName] = field;
+        }
+      }
+    }
+    for (final field in element.fields) {
+      map[field.displayName] = field;
+    }
+    return map.values.toList();
+  }
+
+  List<PropertyAccessorElement> _getGetters(ClassElement element) {
+    final map = <String, PropertyAccessorElement>{};
+    for (final type in element.allSupertypes) {
+      if (type.isDartCoreObject) continue;
+      for (final getter in type.element.getters) {
+        if (!getter.isStatic && !map.containsKey(getter.displayName)) {
+          map[getter.displayName] = getter;
+        }
+      }
+    }
+    for (final getter in element.getters) {
+      map[getter.displayName] = getter;
+    }
+    return map.values.toList();
+  }
+
+  List<PropertyAccessorElement> _getSetters(ClassElement element) {
+    final map = <String, PropertyAccessorElement>{};
+    for (final type in element.allSupertypes) {
+      if (type.isDartCoreObject) continue;
+      for (final setter in type.element.setters) {
+        if (!setter.isStatic && !map.containsKey(setter.displayName)) {
+          map[setter.displayName] = setter;
+        }
+      }
+    }
+    for (final setter in element.setters) {
+      map[setter.displayName] = setter;
+    }
+    return map.values.toList();
+  }
+
+  List<MethodElement> _getMethods(ClassElement element) {
+    final map = <String, MethodElement>{};
+    for (final type in element.allSupertypes) {
+      if (type.isDartCoreObject) continue;
+      for (final method in type.element.methods) {
+        if (!method.isStatic && !map.containsKey(method.displayName)) {
+          map[method.displayName] = method;
+        }
+      }
+    }
+    for (final method in element.methods) {
+      map[method.displayName] = method;
+    }
+    return map.values.toList();
   }
 
   void _preRegisterTypes(ClassElement element, DartObject annotation) {
@@ -284,7 +402,8 @@ class _InternalGenerator {
     final capabilities = _parseCapabilities(annotation);
 
     if (capabilities.contains('fields')) {
-      for (final field in element.fields) {
+      final fields = _getFields(element);
+      for (final field in fields) {
         if (!field.isPrivate && !field.isStatic) {
           _typeRegistry.register(field.type);
           _accessorRegistry.registerGetter(field.displayName);
@@ -295,7 +414,8 @@ class _InternalGenerator {
       }
     }
     if (capabilities.contains('methods')) {
-      for (final m in element.methods) {
+      final methods = _getMethods(element);
+      for (final m in methods) {
         if (!m.isPrivate && !m.isStatic && !m.isOperator) {
           _typeRegistry.register(m.returnType);
           for (final p in m.formalParameters) {
@@ -306,7 +426,8 @@ class _InternalGenerator {
       }
     }
     if (capabilities.contains('getters')) {
-      for (final g in element.getters) {
+      final getters = _getGetters(element);
+      for (final g in getters) {
         if (!g.isPrivate && !g.isStatic && !g.isSynthetic) {
           _typeRegistry.register(g.returnType);
           _accessorRegistry.registerGetter(g.displayName);
@@ -314,7 +435,8 @@ class _InternalGenerator {
       }
     }
     if (capabilities.contains('setters')) {
-      for (final s in element.setters) {
+      final setters = _getSetters(element);
+      for (final s in setters) {
         if (!s.isPrivate && !s.isStatic && !s.isSynthetic) {
           _typeRegistry.register(s.formalParameters.first.type);
           _accessorRegistry.registerSetter(s.displayName);
@@ -356,7 +478,8 @@ class _InternalGenerator {
     if (type is InterfaceType) {
       final qualifiedType = _getQualifiedTypeString(type);
       final indices = _typeRegistry.getTypeArgumentsIndices(type);
-      final indicesStr = indices.isEmpty ? '<int>[]' : '<int>[${indices.join(', ')}]';
+      final indicesStr =
+      indices.isEmpty ? '<int>[]' : '<int>[${indices.join(', ')}]';
       buffer.write(
         "m.type<$qualifiedType>($indicesStr${type.nullabilitySuffix == NullabilitySuffix.question ? ', true' : ''})",
       );
@@ -386,7 +509,8 @@ class _InternalGenerator {
 
     if (capabilities.contains('fields')) {
       buffer.write("<List<dynamic>>[");
-      for (final field in element.fields) {
+      final fields = _getFields(element);
+      for (final field in fields) {
         if (field.isPrivate || field.isStatic) continue;
         await _generateCompactField(field, buffer);
       }
@@ -397,7 +521,8 @@ class _InternalGenerator {
 
     if (capabilities.contains('getters')) {
       buffer.write("<List<dynamic>>[");
-      for (final getter in element.getters) {
+      final getters = _getGetters(element);
+      for (final getter in getters) {
         if (!getter.isPrivate && !getter.isStatic && !getter.isSynthetic) {
           await _generateCompactGetter(getter, buffer);
         }
@@ -409,7 +534,8 @@ class _InternalGenerator {
 
     if (capabilities.contains('setters')) {
       buffer.write("<List<dynamic>>[");
-      for (final setter in element.setters) {
+      final setters = _getSetters(element);
+      for (final setter in setters) {
         if (!setter.isPrivate && !setter.isStatic && !setter.isSynthetic) {
           await _generateCompactSetter(setter, buffer);
         }
@@ -421,7 +547,8 @@ class _InternalGenerator {
 
     if (capabilities.contains('methods')) {
       buffer.write("<List<dynamic>>[");
-      for (final method in element.methods) {
+      final methods = _getMethods(element);
+      for (final method in methods) {
         if (method.isPrivate || method.isStatic || method.isOperator) continue;
         await _generateCompactMethod(method, buffer);
       }
@@ -430,7 +557,7 @@ class _InternalGenerator {
       buffer.write("null, ");
     }
 
-    if (capabilities.contains('constructors')) {
+    if (capabilities.contains('constructors') && !element.isAbstract) {
       buffer.write("<List<dynamic>>[");
       for (final ctor in element.constructors) {
         if (ctor.isPrivate) continue;
@@ -452,7 +579,16 @@ class _InternalGenerator {
     buffer.write(
       "<dynamic>['${field.displayName}', $typeIdx, ${field.isFinal}, ${field.isStatic}, ",
     );
-    await _writeMetadata(field, buffer);
+
+    Element elementToUse = field.nonSynthetic;
+    if (field.metadata.annotations.isEmpty) {
+      if (field.getter != null &&
+          field.getter!.metadata.annotations.isNotEmpty) {
+        elementToUse = field.getter!;
+      }
+    }
+
+    await _writeMetadata(elementToUse, buffer);
     buffer.write("],");
   }
 
@@ -461,7 +597,9 @@ class _InternalGenerator {
       StringBuffer buffer,
       ) async {
     final retIdx = _typeRegistry.register(method.returnType);
-    buffer.write("<dynamic>['${method.displayName}', $retIdx, <List<dynamic>>[");
+    buffer.write(
+      "<dynamic>['${method.displayName}', $retIdx, <List<dynamic>>[",
+    );
     for (final p in method.formalParameters) {
       await _generateCompactParam(p, buffer);
     }
@@ -477,7 +615,8 @@ class _InternalGenerator {
     final name = (ctor.name?.isEmpty ?? true) ? '' : ctor.name!;
     final parent = ctor.enclosingElement;
     final parentPrefix = _imports.getPrefix(parent.library);
-    final fullName = name.isEmpty
+    final fullName =
+    name.isEmpty
         ? '$parentPrefix${parent.name}.new'
         : '$parentPrefix${parent.name}.$name';
 

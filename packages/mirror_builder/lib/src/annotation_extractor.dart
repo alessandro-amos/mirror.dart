@@ -123,11 +123,7 @@ class AnnotationExtractor {
     final node = await _getAstNodeFor(target);
     if (node == null) return null;
 
-    if (node is AnnotatedNode) {
-      return node.metadata;
-    } else if (node is FormalParameter) {
-      return node.metadata;
-    } else if (target is VariableElement) {
+    if (target is VariableElement) {
       if (node is VariableDeclaration) {
         final parent = node.parent;
         if (parent is VariableDeclarationList) {
@@ -138,6 +134,13 @@ class AnnotationExtractor {
         }
       }
     }
+
+    if (node is AnnotatedNode) {
+      return node.metadata;
+    } else if (node is FormalParameter) {
+      return node.metadata;
+    }
+
     return null;
   }
 

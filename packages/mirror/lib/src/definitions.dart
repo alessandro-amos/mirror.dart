@@ -22,6 +22,10 @@ ClassMirror reflectClass(Type type) {
   );
 }
 
+ClassMirror? tryReflectClass(Type type) {
+  return classesMap[type];
+}
+
 EnumMirror reflectEnum(Type type) {
   final mirror = enumsMap[type];
   if (mirror != null) return mirror;
@@ -92,10 +96,10 @@ abstract class DeclarationMirror {
 
 abstract class ObjectMirror {
   dynamic invoke(
-    String memberName,
-    List positionalArguments, [
-    Map<Symbol, dynamic> namedArguments,
-  ]);
+      String memberName,
+      List positionalArguments, [
+        Map<Symbol, dynamic> namedArguments,
+      ]);
 
   dynamic invokeGetter(String getterName);
 
@@ -127,6 +131,10 @@ class TypeMirror<T> {
     return set.cast<T>();
   }
 
+  bool isList() {
+    return T == List || T.toString().startsWith('List<');
+  }
+
   @override
   String toString() {
     final suffix = isNullable ? '?' : '';
@@ -145,16 +153,16 @@ class InstanceMirror<T> implements ObjectMirror {
   final ClassMirror? _classMirror;
 
   InstanceMirror(this.reflectee)
-    : _classMirror = reflectClass(reflectee.runtimeType);
+      : _classMirror = reflectClass(reflectee.runtimeType);
 
   ClassMirror? get type => _classMirror;
 
   @override
   dynamic invoke(
-    String memberName,
-    List positionalArguments, [
-    Map<Symbol, dynamic> namedArguments = const {},
-  ]) {
+      String memberName,
+      List positionalArguments, [
+        Map<Symbol, dynamic> namedArguments = const {},
+      ]) {
     if (_classMirror == null) {
       throw ReflectException(
         "Cannot mirror on type  '${reflectee.runtimeType}'. Is it annotated with @Mirrors?",
@@ -171,6 +179,7 @@ class InstanceMirror<T> implements ObjectMirror {
         "Cannot mirror on type  '${reflectee.runtimeType}'. Is it annotated with @Mirrors?",
       );
     }
+
     final getter = _classMirror.getGetter(getterName);
     if (getter != null) return getter.invoke(reflectee);
 
@@ -228,24 +237,24 @@ class ClassMirror extends DeclarationMirror implements ObjectMirror {
   Map<String, ConstructorMirror>? _constructorsCache;
 
   ClassMirror(
-    String name,
-    this._typeIndex,
-    List<dynamic> metadata,
-    this._fields,
-    this._getters,
-    this._setters,
-    this._methods,
-    this._constructors,
-  ) : super(name, metadata);
+      String name,
+      this._typeIndex,
+      List<dynamic> metadata,
+      this._fields,
+      this._getters,
+      this._setters,
+      this._methods,
+      this._constructors,
+      ) : super(name, metadata);
 
   TypeMirror get type => types[_typeIndex];
 
   @override
   dynamic invoke(
-    String memberName,
-    List positionalArguments, [
-    Map<Symbol, dynamic> namedArguments = const {},
-  ]) {
+      String memberName,
+      List positionalArguments, [
+        Map<Symbol, dynamic> namedArguments = const {},
+      ]) {
     final method = getMethodStrict(memberName);
     if (!method.isStatic) {
       throw ReflectException('Method "$memberName" is not static.');
@@ -257,6 +266,7 @@ class ClassMirror extends DeclarationMirror implements ObjectMirror {
   dynamic invokeGetter(String getterName) {
     final getter = getGetter(getterName);
     if (getter != null && getter.isStatic) return getter.invoke(null);
+
     final field = getField(getterName);
     if (field != null && field.isStatic && field.getter != null) {
       return field.getter!.invoke(null);
@@ -341,15 +351,6 @@ class ClassMirror extends DeclarationMirror implements ObjectMirror {
     if (_gettersCache != null) return UnmodifiableMapView(_gettersCache!);
     final combined = <String, GetterMirror>{};
 
-    if (fields != null) {
-      for (final f in fields!.values) {
-        if (f.getter != null) {
-          final g = f.getter!;
-          g.owner = this;
-          combined[f.name] = g;
-        }
-      }
-    }
     if (_getters != null) {
       for (final raw in _getters) {
         final g = GetterMirror(
@@ -368,15 +369,6 @@ class ClassMirror extends DeclarationMirror implements ObjectMirror {
     if (_settersCache != null) return UnmodifiableMapView(_settersCache!);
     final combined = <String, SetterMirror>{};
 
-    if (fields != null) {
-      for (final f in fields!.values) {
-        if (f.setter != null) {
-          final s = f.setter!;
-          s.owner = this;
-          combined[f.name] = s;
-        }
-      }
-    }
     if (_setters != null) {
       for (final raw in _setters) {
         final s = SetterMirror(
@@ -455,7 +447,7 @@ class EnumMirror extends DeclarationMirror {
   final List<EnumConstantMirror> values;
 
   EnumMirror(String name, this._typeIndex, this.values, List<dynamic> metadata)
-    : super(name, metadata);
+      : super(name, metadata);
 
   TypeMirror get type => types[_typeIndex];
 }
@@ -466,11 +458,11 @@ class EnumConstantMirror extends DeclarationMirror {
   final int index;
 
   const EnumConstantMirror(
-    String name,
-    this.value,
-    this.index,
-    List<dynamic> metadata,
-  ) : super(name, metadata);
+      String name,
+      this.value,
+      this.index,
+      List<dynamic> metadata,
+      ) : super(name, metadata);
 }
 
 class FunctionMirror extends DeclarationMirror {
@@ -480,12 +472,12 @@ class FunctionMirror extends DeclarationMirror {
   final Function Function() _invoker;
 
   FunctionMirror(
-    String name,
-    this._returnTypeIndex,
-    this.parameters,
-    this._invoker,
-    List<dynamic> metadata,
-  ) : super(name, metadata);
+      String name,
+      this._returnTypeIndex,
+      this.parameters,
+      this._invoker,
+      List<dynamic> metadata,
+      ) : super(name, metadata);
 
   TypeMirror get returnType => types[_returnTypeIndex];
 
@@ -504,19 +496,19 @@ class MethodMirror extends DeclarationMirror implements HasOwner<ClassMirror> {
   final List<ParameterMirror> parameters;
 
   MethodMirror(
-    String name,
-    this.returnType,
-    this.parameters, [
-    List<dynamic> metadata = const [],
-  ]) : super(name, metadata);
+      String name,
+      this.returnType,
+      this.parameters, [
+        List<dynamic> metadata = const [],
+      ]) : super(name, metadata);
 
   bool get isStatic => false;
 
   dynamic invoke(
-    dynamic instance, [
-    List args = const [],
-    Map<Symbol, dynamic> namedArgs = const {},
-  ]) {
+      dynamic instance, [
+        List args = const [],
+        Map<Symbol, dynamic> namedArgs = const {},
+      ]) {
     final invoker = methodsInvokers[name];
     if (invoker == null) {
       throw ReflectException("Implementation for method '$name' not found.");
@@ -536,11 +528,11 @@ class ConstructorMirror extends DeclarationMirror
   final List<ParameterMirror> parameters;
 
   ConstructorMirror(
-    String name,
-    this._factory,
-    this.parameters, [
-    List<dynamic> metadata = const [],
-  ]) : super(name, metadata);
+      String name,
+      this._factory,
+      this.parameters, [
+        List<dynamic> metadata = const [],
+      ]) : super(name, metadata);
 
   dynamic invoke([
     List args = const [],
@@ -562,12 +554,12 @@ class VariableMirror extends DeclarationMirror
   final bool isStatic;
 
   VariableMirror(
-    String name,
-    this.type,
-    this.isFinal,
-    this.isStatic, [
-    List<dynamic> metadata = const [],
-  ]) : super(name, metadata);
+      String name,
+      this.type,
+      this.isFinal,
+      this.isStatic, [
+        List<dynamic> metadata = const [],
+      ]) : super(name, metadata);
 
   GetterMirror? get getter {
     if (!gettersInvokers.containsKey(name)) return null;
@@ -590,10 +582,10 @@ class GetterMirror extends DeclarationMirror
   bool _isStatic = false;
 
   GetterMirror(
-    String name,
-    this.returnType, [
-    List<dynamic> metadata = const [],
-  ]) : super(name, metadata);
+      String name,
+      this.returnType, [
+        List<dynamic> metadata = const [],
+      ]) : super(name, metadata);
 
   bool get isStatic => _isStatic;
 
@@ -615,7 +607,7 @@ class SetterMirror extends DeclarationMirror
   bool _isStatic = false;
 
   SetterMirror(String name, this.paramType, [List<dynamic> metadata = const []])
-    : super(name, metadata);
+      : super(name, metadata);
 
   bool get isStatic => _isStatic;
 
@@ -636,12 +628,12 @@ abstract class ParameterMirror extends DeclarationMirror {
   final dynamic defaultValue;
 
   const ParameterMirror(
-    super.name,
-    super.metadata,
-    this.type,
-    this.isOptional,
-    this.defaultValue,
-  );
+      super.name,
+      super.metadata,
+      this.type,
+      this.isOptional,
+      this.defaultValue,
+      );
 
   bool get isNamed;
 
@@ -652,13 +644,13 @@ class PositionalParameter extends ParameterMirror {
   final int index;
 
   const PositionalParameter(
-    String name,
-    TypeMirror type,
-    this.index,
-    bool isOptional,
-    dynamic defaultValue, [
-    List<dynamic> metadata = const [],
-  ]) : super(name, metadata, type, isOptional, defaultValue);
+      String name,
+      TypeMirror type,
+      this.index,
+      bool isOptional,
+      dynamic defaultValue, [
+        List<dynamic> metadata = const [],
+      ]) : super(name, metadata, type, isOptional, defaultValue);
 
   @override
   bool get isNamed => false;
@@ -668,12 +660,12 @@ class NamedParameter extends ParameterMirror {
   bool get isRequired => !isOptional;
 
   const NamedParameter(
-    String name,
-    TypeMirror type,
-    bool isRequired,
-    dynamic defaultValue, [
-    List<dynamic> metadata = const [],
-  ]) : super(name, metadata, type, !isRequired, defaultValue);
+      String name,
+      TypeMirror type,
+      bool isRequired,
+      dynamic defaultValue, [
+        List<dynamic> metadata = const [],
+      ]) : super(name, metadata, type, !isRequired, defaultValue);
 
   @override
   bool get isNamed => true;

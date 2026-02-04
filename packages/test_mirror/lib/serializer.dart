@@ -3,9 +3,7 @@ import 'package:mirror/mirror.dart';
 class Serializable extends Mirrors
     implements
         ConstructorsCapability,
-        FieldsCapability,
-        GettersCapability,
-        SettersCapability {
+        FieldsCapability {
   const Serializable();
 }
 
@@ -64,7 +62,6 @@ class JsonSerializer {
 
     if (json is List) {
       try {
-        // Busca o TypeMirror correspondente a T (ex: List<User>) na lista global
         final typeMirror = types.firstWhere((t) => t.type == T);
         return _decodeValue(json, typeMirror) as T;
       } catch (_) {
