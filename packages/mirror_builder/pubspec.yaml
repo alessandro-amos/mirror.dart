@@ -10,7 +10,7 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
-  mirror: ^0.1.0
+  mirror: ^0.2.0
   analyzer: ^8.0.0
   watcher: ^1.2.1
   path: ^1.9.1
