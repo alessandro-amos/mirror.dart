@@ -46,11 +46,11 @@ InstanceMirror<T> reflectObject<T>(T object) {
   return InstanceMirror<T>(object);
 }
 
-List<ClassMirror> get classes => List.unmodifiable(classesMap.values);
+List<ClassMirror> get classes => classesMap.values.toList();
 
-List<EnumMirror> get enums => List.unmodifiable(enumsMap.values);
+List<EnumMirror> get enums => enumsMap.values.toList();
 
-List<FunctionMirror> get functions => List.unmodifiable(functionsMap.values);
+List<FunctionMirror> get functions => functionsMap.values.toList();
 
 abstract class HasOwner<T extends DeclarationMirror> {
   T get owner;
@@ -80,11 +80,27 @@ abstract class DeclarationMirror {
 
   const DeclarationMirror(this.name, this.metadata);
 
-  bool hasMetadata<T>() => metadata.any((a) => a is T);
+  bool hasMetadata<T>() {
+    for (var m in metadata) {
+      if (m is T) return true;
+    }
+    return false;
+  }
 
-  T? getMetadata<T>() => metadata.whereType<T>().firstOrNull;
+  T? getMetadata<T>() {
+    for (var m in metadata) {
+      if (m is T) return m;
+    }
+    return null;
+  }
 
-  List<T> getAllMetadata<T>() => metadata.whereType<T>().toList();
+  List<T> getAllMetadata<T>() {
+    var list = <T>[];
+    for (var m in metadata) {
+      if (m is T) list.add(m);
+    }
+    return list;
+  }
 
   String get simpleName => name;
 
@@ -116,7 +132,8 @@ class TypeMirror<T> {
   const TypeMirror(this._typeArgumentIndices, this.isNullable);
 
   List<TypeMirror> get typeArguments {
-    return _typeArgumentIndices.map((i) => types[i]).toList();
+    if (_typeArgumentIndices.isEmpty) return const [];
+    return List.generate(_typeArgumentIndices.length, (i) => types[_typeArgumentIndices[i]]);
   }
 
   D captureGenericType<D>(D Function<S>() f) {
@@ -170,7 +187,7 @@ class InstanceMirror<T> implements ObjectMirror {
   final ClassMirror? _classMirror;
 
   InstanceMirror(this.reflectee)
-      : _classMirror = reflectClass(reflectee.runtimeType);
+      : _classMirror = classesMap[reflectee.runtimeType];
 
   ClassMirror? get type => _classMirror;
 
@@ -317,7 +334,7 @@ class ClassMirror extends DeclarationMirror implements ObjectMirror {
 
   Map<String, VariableMirror>? get fields {
     if (_fields == null) return null;
-    if (_fieldsCache != null) return UnmodifiableMapView(_fieldsCache!);
+    if (_fieldsCache != null) return _fieldsCache!;
     _fieldsCache = {};
     for (final raw in _fields) {
       final variable = VariableMirror(
@@ -329,12 +346,12 @@ class ClassMirror extends DeclarationMirror implements ObjectMirror {
       )..owner = this;
       _fieldsCache![variable.name] = variable;
     }
-    return UnmodifiableMapView(_fieldsCache!);
+    return _fieldsCache!;
   }
 
   Map<String, MethodMirror>? get methods {
     if (_methods == null) return null;
-    if (_methodsCache != null) return UnmodifiableMapView(_methodsCache!);
+    if (_methodsCache != null) return _methodsCache!;
     _methodsCache = {};
     for (final raw in _methods) {
       final method = MethodMirror(
@@ -345,14 +362,12 @@ class ClassMirror extends DeclarationMirror implements ObjectMirror {
       )..owner = this;
       _methodsCache![method.name] = method;
     }
-    return UnmodifiableMapView(_methodsCache!);
+    return _methodsCache!;
   }
 
   Map<String, ConstructorMirror>? get constructors {
     if (_constructors == null) return null;
-    if (_constructorsCache != null) {
-      return UnmodifiableMapView(_constructorsCache!);
-    }
+    if (_constructorsCache != null) return _constructorsCache!;
     _constructorsCache = {};
     for (final raw in _constructors) {
       final ctor = ConstructorMirror(
@@ -363,11 +378,11 @@ class ClassMirror extends DeclarationMirror implements ObjectMirror {
       )..owner = this;
       _constructorsCache![ctor.name] = ctor;
     }
-    return UnmodifiableMapView(_constructorsCache!);
+    return _constructorsCache!;
   }
 
   Map<String, GetterMirror>? get getters {
-    if (_gettersCache != null) return UnmodifiableMapView(_gettersCache!);
+    if (_gettersCache != null) return _gettersCache!;
     final combined = <String, GetterMirror>{};
 
     if (_getters != null) {
@@ -381,11 +396,11 @@ class ClassMirror extends DeclarationMirror implements ObjectMirror {
       }
     }
     _gettersCache = combined;
-    return UnmodifiableMapView(_gettersCache!);
+    return _gettersCache!;
   }
 
   Map<String, SetterMirror>? get setters {
-    if (_settersCache != null) return UnmodifiableMapView(_settersCache!);
+    if (_settersCache != null) return _settersCache!;
     final combined = <String, SetterMirror>{};
 
     if (_setters != null) {
@@ -399,7 +414,7 @@ class ClassMirror extends DeclarationMirror implements ObjectMirror {
       }
     }
     _settersCache = combined;
-    return UnmodifiableMapView(_settersCache!);
+    return _settersCache!;
   }
 
   VariableMirror? getField(String name) => fields?[name];
@@ -436,7 +451,8 @@ class ClassMirror extends DeclarationMirror implements ObjectMirror {
 
   List<ParameterMirror> _unpackParams(List<dynamic> rawParams) {
     if (rawParams.isEmpty) return const [];
-    return rawParams.map((p) {
+    return List.generate(rawParams.length, (i) {
+      final p = rawParams[i];
       final name = p[0] as String;
       final isPositional = p[1];
       final isRequired = p[2];
@@ -456,7 +472,7 @@ class ClassMirror extends DeclarationMirror implements ObjectMirror {
       } else {
         return NamedParameter(name, type, isRequired, defaultValue, meta);
       }
-    }).toList();
+    });
   }
 }
 
