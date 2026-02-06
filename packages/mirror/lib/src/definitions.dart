@@ -59,23 +59,22 @@ abstract class HasOwner<T extends DeclarationMirror> {
 class ReflectException implements Exception {
   final String message;
 
-  ReflectException(this.message);
+  const ReflectException(this.message);
 
   @override
   String toString() => 'ReflectException: $message';
 }
 
 class MissingCapabilityException extends ReflectException {
-  MissingCapabilityException(super.message);
+  const MissingCapabilityException(super.message);
 }
 
 class MissingMemberException extends ReflectException {
-  MissingMemberException(super.message);
+  const MissingMemberException(super.message);
 }
 
 abstract class DeclarationMirror {
   final String name;
-
   final List<dynamic> metadata;
 
   const DeclarationMirror(this.name, this.metadata);
@@ -133,7 +132,8 @@ class TypeMirror<T> {
 
   List<TypeMirror> get typeArguments {
     if (_typeArgumentIndices.isEmpty) return const [];
-    return List.generate(_typeArgumentIndices.length, (i) => types[_typeArgumentIndices[i]]);
+    return List.generate(
+        _typeArgumentIndices.length, (i) => types[_typeArgumentIndices[i]]);
   }
 
   D captureGenericType<D>(D Function<S>() f) {
@@ -183,7 +183,6 @@ class TypeMirror<T> {
 
 class InstanceMirror<T> implements ObjectMirror {
   final T reflectee;
-
   final ClassMirror? _classMirror;
 
   InstanceMirror(this.reflectee)
@@ -199,7 +198,7 @@ class InstanceMirror<T> implements ObjectMirror {
       ]) {
     if (_classMirror == null) {
       throw ReflectException(
-        "Cannot mirror on type  '${reflectee.runtimeType}'. Is it annotated with @Mirrors?",
+        "Cannot mirror on type '${reflectee.runtimeType}'. Is it annotated with @Mirrors?",
       );
     }
     final method = _classMirror.getMethodStrict(memberName);
@@ -210,7 +209,7 @@ class InstanceMirror<T> implements ObjectMirror {
   dynamic invokeGetter(String getterName) {
     if (_classMirror == null) {
       throw ReflectException(
-        "Cannot mirror on type  '${reflectee.runtimeType}'. Is it annotated with @Mirrors?",
+        "Cannot mirror on type '${reflectee.runtimeType}'. Is it annotated with @Mirrors?",
       );
     }
 
@@ -231,7 +230,7 @@ class InstanceMirror<T> implements ObjectMirror {
   void invokeSetter(String setterName, dynamic value) {
     if (_classMirror == null) {
       throw ReflectException(
-        "Cannot mirror on type  '${reflectee.runtimeType}'. Is it annotated with @Mirrors?",
+        "Cannot mirror on type '${reflectee.runtimeType}'. Is it annotated with @Mirrors?",
       );
     }
     final normalizedName = setterName.endsWith('=')
@@ -519,7 +518,8 @@ class FunctionMirror extends DeclarationMirror {
   dynamic invoke([
     List args = const [],
     Map<Symbol, dynamic> namedArgs = const {},
-  ]) => Function.apply(_invoker(), args, namedArgs);
+  ]) =>
+      Function.apply(_invoker(), args, namedArgs);
 }
 
 class MethodMirror extends DeclarationMirror implements HasOwner<ClassMirror> {
