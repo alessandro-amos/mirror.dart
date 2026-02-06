@@ -135,6 +135,23 @@ class TypeMirror<T> {
     return T == List || T.toString().startsWith('List<');
   }
 
+  bool isSubtypeOf(dynamic other) {
+    TypeMirror otherMirror;
+    if (other is TypeMirror) {
+      otherMirror = other;
+    } else if (other is ClassMirror) {
+      otherMirror = other.type;
+    } else {
+      throw ReflectException('Argument must be TypeMirror or ClassMirror');
+    }
+
+    return captureGenericType(<S>() {
+      return otherMirror.captureGenericType(<O>() {
+        return <S>[] is List<O>;
+      });
+    });
+  }
+
   @override
   String toString() {
     final suffix = isNullable ? '?' : '';
@@ -248,6 +265,8 @@ class ClassMirror extends DeclarationMirror implements ObjectMirror {
       ) : super(name, metadata);
 
   TypeMirror get type => types[_typeIndex];
+
+  bool isSubtypeOf(dynamic other) => type.isSubtypeOf(other);
 
   @override
   dynamic invoke(
