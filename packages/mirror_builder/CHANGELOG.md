@@ -1,3 +1,7 @@
+## 0.2.1
+
+- Some minor improvements and bug fixes related to the processing of parameters, fields, annotations, etc.
+
 ## 0.2.0
 
 - Applies several changes and bug fixes to the loading and processing of parameters, fields, annotations, etc.
